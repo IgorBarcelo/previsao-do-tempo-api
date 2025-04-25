@@ -20,6 +20,9 @@
         </select>
       </div>
       <div class="col-md-4">
+        <input type="date" id="dataInput" class="form-control" />
+      </div>
+      <div class="col-md-4">
         <button class="btn btn-success w-100" onclick="buscarPrevisoes()">Buscar Previsão</button>
       </div>
     </div>
@@ -41,17 +44,17 @@
   <script>
     const API_BASE = "http://localhost:5000";
 
-    function formatarDataComDiaSemana(dataIso) {
+    // Formata data recebida da API mostrando apenas Dia do mês e Dia da semana
+    function formatarDataComDiaSemana(dataStr) {
       const diasSemana = [
         "domingo", "segunda-feira", "terça-feira", "quarta-feira",
         "quinta-feira", "sexta-feira", "sábado"
       ];
+      const [ano, mes, dia] = dataStr.split("-")
+      const dataObj = new Date(`${ano}-${mes}-${dia}t12:00:00`)
 
-      const data = new Date(dataIso);
-      const diaNumero = data.getDate();
-      const diaSemana = diasSemana[data.getDay()];
-
-      return `${diaNumero} ${diaSemana}`;
+      const nomeDiaSemana = diasSemana[dataObj.getDay()]
+      return `${dia} ${nomeDiaSemana}`;
     }
 
     // Carrega estados ao abrir
@@ -70,20 +73,26 @@
         });
     };
 
-    // Buscar previsões do estado selecionado
+    // Buscar previsões do estado & data
     function buscarPrevisoes() {
       const estado = document.getElementById("estadoSelect").value;
-      if (!estado) return;
+      const data = document.getElementById("dataInput").value;
 
-      const encodedEstado = encodeURIComponent(estado);
-      fetch(`${API_BASE}/previsoes/${encodedEstado}`)
+      let url = `${API_BASE}/previsoes`;
+
+      const params = [];
+      if (estado) params.push(`estado=${encodeURIComponent(estado)}`);
+      if (data) params.push(`data=${encodeURIComponent(data)}`);
+      if (params.length) url += "?" + params.join("&");
+
+      fetch(url)
         .then(res => res.json())
         .then(data => {
           const tbody = document.getElementById("tabelaPrevisao");
           tbody.innerHTML = "";
 
-          if (data.erro) {
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">${data.erro}</td></tr>`;
+          if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Nenhuma previsão encontrada.</td></tr>`;
             return;
           }
 
@@ -94,7 +103,7 @@
               <td>${previsao.temperatura_minima.toFixed(1)}</td>
               <td>${previsao.temperatura_maxima.toFixed(1)}</td>
               <td>${previsao.condicao}</td>
-              <td><img src="${previsao.img}" alt="Ícone do tempo" width="32" height="32" /></td>
+              <td><img src="${previsao.img}" width="32" height="32" alt="Ícone"/></td>
             `;
             tbody.appendChild(tr);
           });

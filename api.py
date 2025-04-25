@@ -12,7 +12,7 @@ DB_NAME = 'clima.db'
 # Agendador
 scheduler = BackgroundScheduler()
 
-# Roda a cada 1 horas 
+# Roda a cada 1 hora 
 scheduler.add_job(func=atualizar_dados, trigger="interval", hours=1)
 
 scheduler.start()
@@ -27,21 +27,52 @@ def query_db(query, args=(), one=False):
     conn.close()
     return (results[0] if results else None) if one else results
 
-# Endpoint 1 – Retorna TODAS as previsões
+# Endpoint 1 – Retorna TODAS as previsões/ por <estato> & por <data>
+from flask import request
+
 @app.route("/previsoes", methods=["GET"])
-def todas_as_previsoes():
-    rows = query_db("SELECT * FROM previsoes ORDER BY estado, data")
+def buscar_previsoes():
+    estado = request.args.get("estado")
+    data = request.args.get("data")
+
+    query = "SELECT * FROM previsoes"
+    params = []
+
+    if estado and data:
+        query += " WHERE estado = ? AND data = ?"
+        params = [estado, data]
+    elif estado:
+        query += " WHERE estado = ?"
+        params = [estado]
+    elif data:
+        query += " WHERE data = ?"
+        params = [data]
+
+    query += " ORDER BY estado, data"
+
+    rows = query_db(query, params)
     dados = [dict(row) for row in rows]
     return jsonify(dados)
 
-# Endpoint 2 – Retorna previsões de um estado específico
-@app.route("/previsoes/<estado>", methods=["GET"])
-def previsao_por_estado(estado):
-    rows = query_db("SELECT * FROM previsoes WHERE estado = ? ORDER BY data", (estado,))
-    if not rows:
-        return jsonify({"erro": "Estado não encontrado"}), 404
-    dados = [dict(row) for row in rows]
-    return jsonify(dados)
+# Endpoint 2 - deleta uma previsão se receber <estado> & <data>
+@app.route("/previsoes", methods=["DELETE"])
+def deletar_previsao():
+    estado = request.args.get("estado")
+    data = request.args.get("data")
+
+    if not estado or not data:
+        return jsonify({"erro": "Informe o estado e a data para exclusão"}), 400
+
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM previsoes WHERE estado = ? AND data = ?", (estado, data))
+    conn.commit()
+    deletados = cur.rowcount
+    conn.close()
+
+    if deletados == 0:
+        return jsonify({"mensagem": "Nenhum registro encontrado para exclusão"}), 404
+    return jsonify({"mensagem": f"{deletados} registro(s) excluído(s) com sucesso"}), 200
 
 if __name__ == "__main__":
     app.run(debug=True)

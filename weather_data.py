@@ -1,14 +1,15 @@
-API_KEY = '164acc977f3c4825819225701252304'
-BASE_URL = 'http://api.weatherapi.com/v1/forecast.json'
-
 import requests
 import sqlite3
+
+API_KEY = 'SUA_CHAVE_WEATHERAPI'
+BASE_URL = 'http://api.weatherapi.com/v1/forecast.json'
 
 estados = ["Acre","Alagoas","Amapa","Amazonas","Bahia","Ceará","Distrito Federal","Espírito Santo","Goiás","Maranhão",
 "Mato Grosso","Mato Grosso do Sul","Minas Gerais","Pará","Paraíba","Paraná","Pernambuco","Piauí","Rio de Janeiro",
 "Rio Grande do Norte","Rio Grande do Sul","Rondônia","Roraima","Santa Catarina","São Paulo","Sergipe","Tocantins",
 ]
 
+# Extrai dados da API Weather API
 def extrair_dados(estado):
     parametros = {
         'key': API_KEY,
@@ -19,6 +20,7 @@ def extrair_dados(estado):
     resposta = requests.get(BASE_URL, params=parametros)
     return resposta.json()
 
+# Cria array com apenas os dados necessarios
 def transformar_dados(json, estado):
     previsoes = []
     for dia in json['forecast']['forecastday']:
@@ -32,6 +34,7 @@ def transformar_dados(json, estado):
         })
     return previsoes
 
+#cria a tabela previsoes no banco
 def criar_tabela():
     conn = sqlite3.connect("clima.db")
     c = conn.cursor()
@@ -48,6 +51,7 @@ def criar_tabela():
     conn.commit()
     conn.close()
 
+# Carrega os dados na tabela previsoes
 def carregar_dados(previsoes):
     conn = sqlite3.connect("clima.db")
     c = conn.cursor()
@@ -59,6 +63,7 @@ def carregar_dados(previsoes):
     conn.commit()
     conn.close()
 
+# Deleta dados antigos e inseri novos obtidos pela API
 def atualizar_dados():
     criar_tabela()
     conn = sqlite3.connect("clima.db")
