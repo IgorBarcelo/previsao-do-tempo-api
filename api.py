@@ -1,8 +1,21 @@
 from flask import Flask, jsonify
+from flask_cors import CORS
+from apscheduler.schedulers.background import BackgroundScheduler
+from weather_data import atualizar_dados
+
 import sqlite3
 
 app = Flask(__name__)
+CORS(app)
 DB_NAME = 'clima.db'
+
+# Agendador
+scheduler = BackgroundScheduler()
+
+# Roda a cada 1 horas 
+scheduler.add_job(func=atualizar_dados, trigger="interval", hours=1)
+
+scheduler.start()
 
 # Função para conectar ao banco e buscar dados
 def query_db(query, args=(), one=False):

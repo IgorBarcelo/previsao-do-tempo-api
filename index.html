@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Previsão do Tempo</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+</head>
+<body class="bg-dark text-white">
+  <div class="container mt-5">
+    <h1 class="mb-4 text-center">Consulta de Previsão do Tempo</h1>
+
+    <div class="row mb-4">
+      <div class="col-md-8">
+        <select id="estadoSelect" class="form-select">
+          <option selected disabled>Selecione um estado</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <button class="btn btn-success w-100" onclick="buscarPrevisoes()">Buscar Previsão</button>
+      </div>
+    </div>
+
+    <table class="table table-striped bg-dark">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Mínima (°C)</th>
+          <th>Máxima (°C)</th>
+          <th colspan="2" class="text-center">Condição</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaPrevisao">
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const API_BASE = "http://localhost:5000";
+
+    function formatarDataComDiaSemana(dataIso) {
+      const diasSemana = [
+        "domingo", "segunda-feira", "terça-feira", "quarta-feira",
+        "quinta-feira", "sexta-feira", "sábado"
+      ];
+
+      const data = new Date(dataIso);
+      const diaNumero = data.getDate();
+      const diaSemana = diasSemana[data.getDay()];
+
+      return `${diaNumero} ${diaSemana}`;
+    }
+
+    // Carrega estados ao abrir
+    window.onload = () => {
+      fetch(`${API_BASE}/previsoes`)
+        .then(res => res.json())
+        .then(data => {
+          const estadosUnicos = [...new Set(data.map(p => p.estado))].sort();
+          const select = document.getElementById("estadoSelect");
+          estadosUnicos.forEach(estado => {
+            const option = document.createElement("option");
+            option.value = estado;
+            option.textContent = estado;
+            select.appendChild(option);
+          });
+        });
+    };
+
+    // Buscar previsões do estado selecionado
+    function buscarPrevisoes() {
+      const estado = document.getElementById("estadoSelect").value;
+      if (!estado) return;
+
+      const encodedEstado = encodeURIComponent(estado);
+      fetch(`${API_BASE}/previsoes/${encodedEstado}`)
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.getElementById("tabelaPrevisao");
+          tbody.innerHTML = "";
+
+          if (data.erro) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">${data.erro}</td></tr>`;
+            return;
+          }
+
+          data.forEach(previsao => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${formatarDataComDiaSemana(previsao.data)}</td>
+              <td>${previsao.temperatura_minima.toFixed(1)}</td>
+              <td>${previsao.temperatura_maxima.toFixed(1)}</td>
+              <td>${previsao.condicao}</td>
+              <td><img src="${previsao.img}" alt="Ícone do tempo" width="32" height="32" /></td>
+            `;
+            tbody.appendChild(tr);
+          });
+        });
+    }
+  </script>
+</body>
+</html>

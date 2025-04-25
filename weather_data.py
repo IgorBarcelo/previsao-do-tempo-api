@@ -19,7 +19,7 @@ def extrair_dados(estado):
     resposta = requests.get(BASE_URL, params=parametros)
     return resposta.json()
 
-def transformar_dados(json, estados):
+def transformar_dados(json, estado):
     previsoes = []
     for dia in json['forecast']['forecastday']:
         previsoes.append({
@@ -59,9 +59,14 @@ def carregar_dados(previsoes):
     conn.commit()
     conn.close()
 
-
-if __name__ == "__main__":
+def atualizar_dados():
     criar_tabela()
+    conn = sqlite3.connect("clima.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM previsoes")
+    conn.commit()
+    conn.close()
+
     for estado in estados:
         try:
             json = extrair_dados(estado)
@@ -69,4 +74,8 @@ if __name__ == "__main__":
             carregar_dados(previsoes)
             print(estado, 'carregado')
         except Exception as e:
-            print(f"Erro no estado {e}")
+            print(f"Erro no estado {estado}: {e}")
+
+
+if __name__ == "__main__":
+    atualizar_dados()
